@@ -50,9 +50,10 @@ class Struct(Value):
         return Struct(self.data, updated)
 
 class FloatingChain(Value):
-    def __init__(self, chain, adjuncts=None):
+    def __init__(self, chain, saved_scope, adjuncts=None):
         super().__init__(adjuncts)
         self.chain = chain
+        self.saved_scope = saved_scope
     def adjoin(self, d):
         updated = dict(d)
         for k, v in self.adjuncts.items():
@@ -72,8 +73,11 @@ class Chain(Expression):
         for i, link in enumerate(self.links):
             if link.open_brace is Square:
                 modified = Link(Curly, link.close_brace, link.terms)
-                return FloatingChain(Chain([modified]+self.links[i+1:]))
-            curr = link.evaluate(curr, scope)
+                return FloatingChain(Chain([modified]+self.links[i+1:]), scope)
+            prev = curr
+            curr = link.evaluate(prev, scope)
+            if isinstance(curr, FloatingChain):
+                curr = curr.chain.evaluate(prev, curr.saved_scope)
         return curr
 
 class Brace:
@@ -110,6 +114,7 @@ class Square(Brace):
     def pack(cls, indices, inputs, outputs, scope):
         for i, o in zip(indices, outputs):
             scope[i] = o
+        return HNONE
 
 class Angle(Brace):
     @classmethod
@@ -148,3 +153,9 @@ class Constant(Expression):
         self.value = value
     def evaluate(self, inputs, scope):
         return self.value
+
+class Reference(Expression):
+    def __init__(self, key):
+        self.key = key
+    def evaluate(self, inputs, scope):
+        return scope.get(self.key, HNONE)
