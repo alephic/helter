@@ -84,3 +84,5 @@ We can define some slightly more interesting chains:
 > {1, {3, 2}} tail head
 3
 ```
+
+Type `:q` to exit the repl.
