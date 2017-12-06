@@ -32,7 +32,7 @@ Each of the brackets have the following effects on link semantics:
 
 `y, z} w` | `y` and `z` become the first and second components of a structure that then becomes the input to `w`
 
-`[y` | regardless of its input, the rest of the chain containing this link is severed and becomes the output of the expression containing it
+`[y` | regardless of its input, the rest of the chain containing this link is severed and becomes the output of the expression containing it (with this brace replaced by `(`)
 
 `x: y] z` | `z` is evaluated in a scope containing a reference with key `x` and value `y`
 
@@ -43,3 +43,43 @@ Each of the brackets have the following effects on link semantics:
 Each term following `{` or `<` or preceding `}` or `>` may be an indexed expression, in which case the component or adjunct values are accessed by keyword instead of by order alone.
 
 If a link in a chain is a reference, and that reference evaluates to a severed chain, the severed chain is inserted into the chain being evaluated (but as a closure, preserving its original scope).
+
+# Using Helter
+
+Invoke the repl with the following command:
+
+```
+$ python3 -m repl
+```
+
+A prompt should appear. You can type helter expressions into this prompt as part of an ongoing chain and view the intermediate values.
+
+```
+> (id: [>]
+()
+```
+Evaluating this expression introduced a binding for the reference `id` to the chain `(>`.
+The immediate result was the "unit" value, indicated by `()`.
+
+Now we can refer to the chain `(>` by the handy name `id`:
+```
+> 1 (>
+1
+> 1 id
+1
+```
+Incidentally, `id` is a chain that returns whatever its input is.
+
+We can define some slightly more interesting chains:
+```
+> (head: [{id))]
+()
+> {1, 2} head
+1
+> (tail: [{(), id)]
+()
+> {1, 2} tail
+2
+> {1, {3, 2}} tail head
+3
+```
