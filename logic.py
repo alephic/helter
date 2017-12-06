@@ -53,6 +53,8 @@ class Symbol(Value):
             return 'Symbol(%s)' % repr(self.name)
         else:
             return 'Symbol(%s, adjuncts=%s)' % (repr(self.name), repr(self.adjuncts))
+    def __str__(self):
+        return self.name
 
 class HelterNone(Value):
     def __init__(self):
@@ -63,6 +65,8 @@ class HelterNone(Value):
         return self
     def adjoin(self, d):
         return Value(d)
+    def __str__(self):
+        return '()'
 
 HNONE = HelterNone()
 
@@ -111,7 +115,7 @@ class Chain(Expression):
     def evaluate(self, inputs, scope):
         curr = inputs
         for i, link in enumerate(self.links):
-            if link.open_brace is Square:
+            if isinstance(link, Link) and link.open_brace is Square:
                 modified = Link(Curly, link.close_brace, link.terms)
                 return FloatingChain(Chain([modified]+self.links[i+1:]), scope)
             prev = curr
@@ -143,7 +147,7 @@ class Paren(Brace):
             yield inputs
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
-        last = None
+        last = inputs
         for output in outputs:
             last = output
         return last
@@ -241,6 +245,3 @@ class Reference(Expression):
         return scope.get(self.key, HNONE)
     def __str__(self):
         return str(self.key)
-
-def evaluate(expr):
-    return expr.evaluate(HNONE, SymbolPool())
