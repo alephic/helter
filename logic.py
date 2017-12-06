@@ -9,7 +9,7 @@ class SymbolPool:
     def __contains__(self, k):
         return True
     def make(self, k):
-        s = Value()
+        s = Symbol(k)
         self.data[k] = s
         return s
 
@@ -37,6 +37,22 @@ class Value:
             if k not in updated:
                 updated[k] = v
         return Value(updated)
+
+class Symbol(Value):
+    def __init__(self, name, adjuncts=None):
+        super().__init__(adjuncts)
+        self.name = name
+    def adjoin(self, d):
+        updated = dict(d)
+        for k, v in self.adjuncts.items():
+            if k not in updated:
+                updated[k] = v
+        return Symbol(self.name, updated)
+    def __repr__(self):
+        if len(self.adjuncts) == 0:
+            return 'Symbol(%s)' % repr(self.name)
+        else:
+            return 'Symbol(%s, adjuncts=%s)' % (repr(self.name), repr(self.adjuncts))
 
 class HelterNone(Value):
     def __init__(self):
@@ -225,3 +241,6 @@ class Reference(Expression):
         return scope.get(self.key, HNONE)
     def __str__(self):
         return str(self.key)
+
+def evaluate(expr):
+    return expr.evaluate(HNONE, SymbolPool())
