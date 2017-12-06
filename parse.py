@@ -94,3 +94,6 @@ def parse_expr(t):
                     return Chain(chain)
     t.pos = reset
     return None
+
+def parse(s):
+    return parse_expr(Tracker(s))
