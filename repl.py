@@ -1,4 +1,7 @@
-import readline
+try:
+    import readline
+except ImportError as e:
+    pass
 import parse
 import logic
 
