@@ -115,7 +115,7 @@ class Chain(Expression):
 
 class Brace:
     @classmethod
-    def unpack(cls, indices, inputs, scope):
+    def unpack(cls, indices, terms, inputs, scope):
         raise NotImplementedError()
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
@@ -129,9 +129,9 @@ class Brace:
 
 class Paren(Brace):
     @classmethod
-    def unpack(cls, indices, inputs, scope):
-        for _ in indices:
-            yield inputs
+    def unpack(cls, indices, terms, inputs, scope):
+        for t in terms:
+            yield t, inputs
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
         last = HNONE
@@ -147,9 +147,11 @@ class Paren(Brace):
 
 class Curly(Brace):
     @classmethod
-    def unpack(cls, indices, inputs, scope):
-        for i in indices:
-            yield inputs.get_component(i)
+    def unpack(cls, indices, terms, inputs, scope):
+        for t, i in zip(terms, indices):
+            component = inputs.get_component(i)
+            if component != HNONE:
+                yield t, component
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
         return Struct({i: o for i, o in zip(indices, outputs)})
@@ -175,9 +177,11 @@ class Square(Brace):
 
 class Angle(Brace):
     @classmethod
-    def unpack(cls, indices, inputs, scope):
-        for i in indices:
-            yield inputs.get_adjunct(i)
+    def unpack(cls, indices, terms, inputs, scope):
+        for t, i in zip(terms, indices):
+            adjunct = inputs.get_adjunct(i)
+            if adjunct != HNONE:
+                yield t, adjunct
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
         d = {i: o for i, o in zip(indices, outputs)}
@@ -199,10 +203,10 @@ class Link(Expression):
     def evaluate(self, inputs, scope):
         if self.open_brace is Square:
             return FloatingChain(Chain([Link(Paren, self.close_brace, self.terms)]), scope)
-        indices = [term.key if isinstance(term, IndexedTerm) else i for i, term in enumerate(self.terms)]
+        indices = (term.key if isinstance(term, IndexedTerm) else i for i, term in enumerate(self.terms))
         return self.close_brace.pack(
             indices, inputs,
-            (term.evaluate(term_input, Scope(scope)) for term, term_input in zip(self.terms, self.open_brace.unpack(indices, inputs, scope))),
+            (term.evaluate(term_input, Scope(scope)) for term, term_input in self.open_brace.unpack(indices, self.terms, inputs, scope)),
             scope
         )
     def __str__(self):
