@@ -9,7 +9,7 @@ A Helter expression is one of two things:
 - A named reference, e.g. `foo` (containing any non-whitespace, non-reserved characters).
 - A "chain" of "links"
 
-Each link is a bracketed list of terms.
+Each link is a bracketed, comma-separated list of terms.
 
 Brackets come from the following set: `()[]{}<>`
 
@@ -19,7 +19,7 @@ A term can either be:
 
 The behavior of a link is determined by the type of bracket at each of its ends.
 
-Brackets _need not have matching types_.
+Brackets _do not need to have matching types_.
 
 Each link or chain acts as a component in a data stream. The output of the expression to a link's left is fed into it, and its output is then passed on to the link on its right.
 
