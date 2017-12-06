@@ -1,6 +1,7 @@
 
 
 # Helter
+### An esoteric programming language built on mismatched braces
 
 ## Syntax
 
@@ -44,7 +45,7 @@ Each term following `{` or `<` or preceding `}` or `>` may be an indexed express
 
 If a link in a chain is a reference, and that reference evaluates to a severed chain, the severed chain is inserted into the chain being evaluated (but as a closure, preserving its original scope).
 
-# Using Helter
+## Using Helter
 
 Invoke the repl with the following command:
 
