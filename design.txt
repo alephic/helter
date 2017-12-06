@@ -1,8 +1,0 @@
-( id in
-) id out
-{ unpack struct
-} pack struct
-[ placeholder
-] define
-< access adjuncts
-> adjoin
