@@ -47,10 +47,11 @@ If a link in a chain is a reference, and that reference evaluates to a severed c
 
 ## Using Helter
 
-Invoke the repl with the following command:
+Invoke the interactive shell with either of the following commands:
 
 ```
 $ python3 -m repl
+$ python3 -m helter
 ```
 
 A prompt should appear. You can type helter expressions into this prompt as part of an ongoing chain and view the intermediate values.
@@ -75,13 +76,13 @@ We can define some slightly more interesting chains:
 ```
 > (head: [{id))]
 ()
-> {1, 2} head
+> (1, 2} head
 1
 > (tail: [{(), id)]
 ()
-> {1, 2} tail
+> (1, 2} tail
 2
-> {1, {3, 2}} tail head
+> (1, (3, 2}} tail head
 3
 ```
 

@@ -4,10 +4,11 @@ except ImportError as e:
     pass
 import parse
 import logic
+import sys
 
-if __name__ == "__main__":
-    curr = logic.HNONE
-    scope = logic.Scope(logic.SymbolPool())
+def repl(init_value=None, scope=None):
+    curr = init_value or logic.HNONE
+    scope = scope or logic.Scope(logic.SymbolPool())
     while True:
         i = input('> ')
         if i == ':q':
@@ -24,4 +25,7 @@ if __name__ == "__main__":
             print(new_val)
             curr = new_val
         else:
-            print('Invalid syntax')
+            print('Invalid syntax', sys.stderr)
+
+if __name__ == "__main__":
+    repl()

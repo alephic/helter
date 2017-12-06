@@ -79,8 +79,8 @@ class Struct(Value):
         return Struct(self.data, updated)
     def __str__(self):
         if all(isinstance(k, int) for k in self.data):
-            return '{%s}' % ', '.join(str(self.data[i]) for i in range(len(self.data)))
-        return '{%s}' % ', '.join('%s: %s' % (key, str(val)) for key, val in self.data.items())
+            return '(%s}' % ', '.join(str(self.data[i]) for i in range(len(self.data)))
+        return '(%s}' % ', '.join('%s: %s' % (key, str(val)) for key, val in self.data.items())
 
 class FloatingChain(Value):
     def __init__(self, chain, saved_scope, adjuncts=None):
