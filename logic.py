@@ -137,7 +137,7 @@ class Paren(Brace):
             yield inputs
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
-        last = inputs
+        last = HNONE
         for output in outputs:
             last = output
         return last
@@ -184,6 +184,8 @@ class Angle(Brace):
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
         d = {i: o for i, o in zip(indices, outputs)}
+        if len(d) == 0:
+            return inputs
         return inputs.adjoin(d)
     @classmethod
     def get_open_char(self):
