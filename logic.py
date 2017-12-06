@@ -107,11 +107,8 @@ class Chain(Expression):
         curr = inputs
         for i, link in enumerate(self.links):
             if isinstance(link, Link) and link.open_brace is Square:
-                return FloatingChain(Chain([Link(Curly, link.close_brace, link.terms)]+self.links[i+1:]), scope)
-            prev = curr
-            curr = link.evaluate(prev, scope)
-            if isinstance(curr, FloatingChain):
-                curr = curr.chain.evaluate(prev, curr.saved_scope)
+                return FloatingChain(Chain([Link(Paren, link.close_brace, link.terms)]+self.links[i+1:]), scope)
+            curr = link.evaluate(curr, scope)
         return curr
     def __str__(self):
         return ''.join(map(str, self.links))
@@ -201,7 +198,7 @@ class Link(Expression):
         self.terms = terms
     def evaluate(self, inputs, scope):
         if self.open_brace is Square:
-            return FloatingChain(Chain([Link(Curly, self.close_brace, self.terms)]), scope)
+            return FloatingChain(Chain([Link(Paren, self.close_brace, self.terms)]), scope)
         indices = [term.key if isinstance(term, IndexedTerm) else i for i, term in enumerate(self.terms)]
         return self.close_brace.pack(
             indices, inputs,
@@ -236,6 +233,9 @@ class Reference(Expression):
     def __init__(self, key):
         self.key = key
     def evaluate(self, inputs, scope):
-        return scope.get(self.key, HNONE)
+        deref = scope.get(self.key, HNONE)
+        if isinstance(deref, FloatingChain):
+            return deref.chain.evaluate(inputs, deref.saved_scope)
+        return deref
     def __str__(self):
         return str(self.key)
