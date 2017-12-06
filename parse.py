@@ -31,13 +31,13 @@ def parse_reference(t):
 def parse_open(t):
     m = parse_re(OPEN, t)
     if m:
-        return {'(': PAREN, '{': CURLY, '[': SQUARE, '<': ANGLE}[m]
+        return {'(': Paren, '{': Curly, '[': Square, '<': Angle}[m]
     return None
 
 def parse_close(t):
     m = parse_re(CLOSE, t)
     if m:
-        return {')': PAREN, '}': CURLY, ']': SQUARE, '>': ANGLE}[m]
+        return {')': Paren, '}': Curly, ']': Square, '>': Angle}[m]
     return None
 
 def parse_link(t):

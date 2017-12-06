@@ -196,7 +196,7 @@ class Link(Expression):
         )
     def __str__(self):
         return '%s%s%s' % (
-            self.open_brace.get_open_char()
+            self.open_brace.get_open_char(),
             ', '.join(map(str, self.terms)),
             self.close_brace.get_close_char()
         )
