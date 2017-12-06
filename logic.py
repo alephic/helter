@@ -59,7 +59,7 @@ class HelterNone(Value):
     def get_component(self, index):
         return self
     def adjoin(self, d):
-        return Value(d)
+        return self
     def __str__(self):
         return '()'
 
