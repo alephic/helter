@@ -48,11 +48,6 @@ class Symbol(Value):
             if k not in updated:
                 updated[k] = v
         return Symbol(self.name, updated)
-    def __repr__(self):
-        if len(self.adjuncts) == 0:
-            return 'Symbol(%s)' % repr(self.name)
-        else:
-            return 'Symbol(%s, adjuncts=%s)' % (repr(self.name), repr(self.adjuncts))
     def __str__(self):
         return self.name
 
@@ -82,11 +77,8 @@ class Struct(Value):
             if k not in updated:
                 updated[k] = v
         return Struct(self.data, updated)
-    def __repr__(self):
-        if len(self.adjuncts) == 0:
-            return 'Struct(%s)' % repr(self.data)
-        else:
-            return 'Struct(%s, adjuncts=%s)' % (repr(self.data), repr(self.adjuncts))
+    def __str__(self):
+        return '{%s}' % ', '.join('%s: %s' % (key, str(val)) for key, val in self.data.items())
 
 class FloatingChain(Value):
     def __init__(self, chain, saved_scope, adjuncts=None):
@@ -99,11 +91,8 @@ class FloatingChain(Value):
             if k not in updated:
                 updated[k] = v
         return FloatingChain(self.chain, updated)
-    def __repr__(self):
-        if len(self.adjuncts) == 0:
-            return 'FloatingChain(%s)' % str(self.chain)
-        else:
-            return 'FloatingChain(%s, adjuncts=%s)' % (str(self.chain), repr(self.adjuncts))
+    def __str__(self):
+        return str(self.chain)
 
 class Expression:
     def evaluate(self, inputs, scope):
@@ -116,8 +105,7 @@ class Chain(Expression):
         curr = inputs
         for i, link in enumerate(self.links):
             if isinstance(link, Link) and link.open_brace is Square:
-                modified = Link(Curly, link.close_brace, link.terms)
-                return FloatingChain(Chain([modified]+self.links[i+1:]), scope)
+                return FloatingChain(Chain([Link(Curly, link.close_brace, link.terms)]+self.links[i+1:]), scope)
             prev = curr
             curr = link.evaluate(prev, scope)
             if isinstance(curr, FloatingChain):
@@ -208,6 +196,8 @@ class Link(Expression):
         self.close_brace = close_brace
         self.terms = terms
     def evaluate(self, inputs, scope):
+        if self.open_brace is Square:
+            return FloatingChain(Chain([Link(Curly, self.close_brace, self.terms)]), scope)
         indices = [term.key if isinstance(term, IndexedTerm) else i for i, term in enumerate(self.terms)]
         return self.close_brace.pack(
             indices, inputs,
