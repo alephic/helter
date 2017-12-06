@@ -33,7 +33,7 @@ Each of the brackets have the following effects on link semantics:
 
 `y, z} w` | `y` and `z` become the first and second components of a structure that then becomes the input to `w`
 
-`[y` | regardless of its input, the rest of the chain containing this link is severed and becomes the output of the expression containing it (with this brace replaced by `(`)
+`[y` | regardless of its input, the rest of the chain containing this link is severed and becomes the output of the expression containing it, with this brace replaced by `(`
 
 `x: y] z` | `z` is evaluated in a scope containing a reference with key `x` and value `y`
 
