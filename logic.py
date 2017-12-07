@@ -103,11 +103,15 @@ class Expression:
 class Chain(Expression):
     def __init__(self, links):
         self.links = links
-    def evaluate(self, inputs, scope):
+    def evaluate(self, inputs, init_scope):
         curr = inputs
+        scope = init_scope
         for i, link in enumerate(self.links):
-            if isinstance(link, Link) and link.open_brace is Square:
-                return FloatingChain(Chain([Link(Paren, link.close_brace, link.terms)]+self.links[i+1:]), scope)
+            if isinstance(link, Link):
+                if link.open_brace is Square:
+                    return FloatingChain(Chain([Link(Paren, link.close_brace, link.terms)]+self.links[i+1:]), scope)
+                if link.close_brace is Square and scope is init_scope:
+                    scope = Scope(scope)
             curr = link.evaluate(curr, scope)
         return curr
     def __str__(self):
