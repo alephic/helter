@@ -36,6 +36,20 @@ class Protect:
     def __setitem__(self, k, v):
         pass
 
+class Shadow:
+    def __init__(self, base, shadow_keys):
+        self.base = base
+        self.shadow_keys = shadow_keys
+    def __getitem__(self, k):
+        if k in self.shadow_keys:
+            raise IndexError()
+        else:
+            return self.base[k]
+    def get(self, k, default=None):
+        return default if k in self.shadow_keys else self.base.get(k, default)
+    def __contains__(self, k):
+        return k not in self.shadow_keys and k in self.base
+
 class Value:
     def __init__(self, adjuncts=None):
         self.adjuncts = adjuncts or {}
@@ -111,6 +125,8 @@ class FloatingChain(Value):
 class Expression:
     def evaluate(self, inputs, scope, mutate_scope=False):
         raise NotImplementedError()
+    def subst(self, scope):
+        raise NotImplementedError()
 
 class Chain(Expression):
     def __init__(self, links):
@@ -122,12 +138,20 @@ class Chain(Expression):
             if isinstance(link, Link):
                 if link.open_brace is Square:
                     return FloatingChain(Chain([Link(Paren, link.close_brace, link.terms)]+self.links[i+1:]), scope)
-                if link.close_brace is Square and scope is init_scope:
+                if link.close_brace is Square and scope is init_scope and not mutate_scope:
                     scope = Scope(scope)
             curr, scope = link.evaluate(curr, scope, mutate_scope=True)
         return curr
     def __str__(self):
         return ''.join(map(str, self.links))
+    def subst(self, init_scope):
+        scope = init_scope
+        new_links = []
+        for link in self.links:
+            new_links.append(link.subst(scope))
+            if isinstance(link, Link) and link.close_brace is Square:
+                scope = Shadow(scope, set(term.key for term in link.terms if isinstance(term, IndexedTerm)))
+        return Chain(new_links)
 
 class Brace:
     @classmethod
@@ -231,6 +255,8 @@ class Link(Expression):
             ', '.join(map(str, self.terms)),
             self.close_brace.get_close_char()
         )
+    def subst(self, scope):
+        return Link(self.open_brace, self.close_brace, [term.subst(scope) for term in self.terms])
 
 class IndexedTerm(Expression):
     def __init__(self, key, value_expr):
@@ -240,6 +266,8 @@ class IndexedTerm(Expression):
         return self.value_expr.evaluate(inputs, scope, mutate_scope)
     def __str__(self):
         return '%s: %s' % (str(self.key), str(self.value_expr))
+    def subst(self, scope):
+        return IndexedTerm(self.key, self.value_expr.subst(scope))
 
 class Constant(Expression):
     def __init__(self, value):
@@ -248,6 +276,8 @@ class Constant(Expression):
         return self.value
     def __str__(self):
         return repr(self.value)
+    def subst(self, scope):
+        return self
 
 class Reference(Expression):
     def __init__(self, key):
@@ -259,3 +289,9 @@ class Reference(Expression):
         return deref
     def __str__(self):
         return str(self.key)
+    def subst(self, scope):
+        replacement = scope.get(self.key)
+        if replacement:
+            return Constant(replacement)
+        else:
+            return self

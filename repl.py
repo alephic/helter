@@ -18,7 +18,7 @@ def repl(init_value=None, scope=None):
         p = parse.parse(i)
         if p:
             try:
-                new_val = p.evaluate(curr, scope)
+                new_val = p.evaluate(curr, scope, mutate_scope=True)
             except Exception as e:
                 print(e)
                 continue
