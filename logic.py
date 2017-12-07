@@ -64,6 +64,19 @@ class Value:
                 updated[k] = v
         return Value(updated)
 
+class Boxed(Value):
+    def __init__(self, content, adjuncts=None):
+        super().__init__(adjuncts)
+        self.content = content
+    def adjoin(self, d):
+        updated = dict(d)
+        for k, v in self.adjuncts.items():
+            if k not in updated:
+                updated[k] = v
+        return Boxed(self.content, updated)
+    def __str__(self):
+        return repr(self.content)
+
 class Symbol(Value):
     def __init__(self, name, adjuncts=None):
         super().__init__(adjuncts)
@@ -106,7 +119,9 @@ class Struct(Value):
     def __str__(self):
         if all(isinstance(k, int) for k in self.data):
             return '(%s}' % ', '.join(str(self.data[i]) for i in range(len(self.data)))
-        return '(%s}' % ', '.join('%s: %s' % (key, str(val)) for key, val in self.data.items())
+        return '(%s}' % ', '.join(':%s:%s' % (str(val), key) for key, val in self.data.items())
+    def __eq__(self, other):
+        return isinstance(other, Struct) and self.data == other.data
 
 class FloatingChain(Value):
     def __init__(self, chain, saved_scope, adjuncts=None):
@@ -128,6 +143,13 @@ class Expression:
     def subst(self, scope):
         raise NotImplementedError()
 
+class Identity(Expression):
+    def evaluate(self, inputs, scope, mutate_scope=False):
+        return inputs
+    def subst(self, scope):
+        return self
+IDENTITY = Identity()
+
 class Chain(Expression):
     def __init__(self, links):
         self.links = links
@@ -140,7 +162,7 @@ class Chain(Expression):
                     return FloatingChain(Chain([Link(Paren, link.close_brace, link.terms)]+self.links[i+1:]), scope)
                 if link.close_brace is Square and scope is init_scope and not mutate_scope:
                     scope = Scope(scope)
-            curr, scope = link.evaluate(curr, scope, mutate_scope=True)
+            curr = link.evaluate(curr, scope, mutate_scope=True)
         return curr
     def __str__(self):
         return ''.join(map(str, self.links))
@@ -150,12 +172,12 @@ class Chain(Expression):
         for link in self.links:
             new_links.append(link.subst(scope))
             if isinstance(link, Link) and link.close_brace is Square:
-                scope = Shadow(scope, set(term.key for term in link.terms if isinstance(term, IndexedTerm)))
+                scope = Shadow(scope, set(term.out_key for term in link.terms))
         return Chain(new_links)
 
 class Brace:
     @classmethod
-    def unpack(cls, indices, terms, inputs, scope):
+    def unpack(cls, terms, inputs, scope):
         raise NotImplementedError()
     @classmethod
     def pack(cls, indices, inputs, outputs, scope):
@@ -169,7 +191,7 @@ class Brace:
 
 class Paren(Brace):
     @classmethod
-    def unpack(cls, indices, terms, inputs, scope):
+    def unpack(cls, terms, inputs, scope):
         for t in terms:
             yield t, inputs
     @classmethod
@@ -187,9 +209,9 @@ class Paren(Brace):
 
 class Curly(Brace):
     @classmethod
-    def unpack(cls, indices, terms, inputs, scope):
-        for t, i in zip(terms, indices):
-            component = inputs.get_component(i)
+    def unpack(cls, terms, inputs, scope):
+        for t in terms:
+            component = inputs.get_component(t.in_key)
             if component != HNONE:
                 yield t, component
     @classmethod
@@ -217,9 +239,9 @@ class Square(Brace):
 
 class Angle(Brace):
     @classmethod
-    def unpack(cls, indices, terms, inputs, scope):
-        for t, i in zip(terms, indices):
-            adjunct = inputs.get_adjunct(i)
+    def unpack(cls, terms, inputs, scope):
+        for t in terms:
+            adjunct = inputs.get_adjunct(t.in_key)
             if adjunct != HNONE:
                 yield t, adjunct
     @classmethod
@@ -243,10 +265,10 @@ class Link(Expression):
     def evaluate(self, inputs, scope, mutate_scope=False):
         if self.open_brace is Square:
             return FloatingChain(Chain([Link(Paren, self.close_brace, self.terms)]), scope)
-        indices = (term.key if isinstance(term, IndexedTerm) else i for i, term in enumerate(self.terms))
+        unpacked = list(self.open_brace.unpack(self.terms, inputs, scope))
         return self.close_brace.pack(
-            indices, inputs,
-            (term.evaluate(term_input, scope) for term, term_input in self.open_brace.unpack(indices, self.terms, inputs, scope)),
+            (term.out_key for term, _ in unpacked), inputs,
+            (term.evaluate(term_input, scope) for term, term_input in unpacked),
             scope if mutate_scope or self.close_brace is not Square else Protect(scope)
         )
     def __str__(self):
@@ -259,15 +281,22 @@ class Link(Expression):
         return Link(self.open_brace, self.close_brace, [term.subst(scope) for term in self.terms])
 
 class IndexedTerm(Expression):
-    def __init__(self, key, value_expr):
-        self.key = key
+    def __init__(self, in_key, out_key, value_expr):
+        self.in_key = in_key
+        self.out_key = out_key
         self.value_expr = value_expr
     def evaluate(self, inputs, scope, mutate_scope=False):
         return self.value_expr.evaluate(inputs, scope, mutate_scope)
     def __str__(self):
-        return '%s: %s' % (str(self.key), str(self.value_expr))
+        if isinstance(self.in_key, int):
+            if isinstance(self.out_key, int):
+                return str(self.value_expr)
+            return ':%s:%s' % (str(self.value_expr), str(self.out_key))
+        if isinstance(self.out_key, int):
+            return '%s:%s' % (str(self.in_key), str(self.value_expr))
+        return '%s:%s:%s' % (str(self.in_key), str(self.value_expr), str(self.out_key))
     def subst(self, scope):
-        return IndexedTerm(self.key, self.value_expr.subst(scope))
+        return IndexedTerm(self.in_key, self.out_key, self.value_expr.subst(scope))
 
 class Constant(Expression):
     def __init__(self, value):

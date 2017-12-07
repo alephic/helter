@@ -1,12 +1,17 @@
 import re
 from logic import *
+import helter_builtins
 
 OPEN = re.compile(r'[\(\[\{<]')
 CLOSE = re.compile(r'[\)\]\}>]')
 COMMA = re.compile(r',')
 COLON = re.compile(r':')
-SYM = re.compile(r'[^()\[\]\s\{\}<>,:]+')
-SPACES = re.compile(r'\s*')
+QUOTE = re.compile(r'"')
+ESCAPE = re.compile(r'\\(["\\abrntfv]|x[a-fA-F0-9]{2}|u[a-fA-F0-9]{4}|U[a-fA-F0-9]{8})')
+INT = re.compile(r'-?[0-9]+')
+FLOAT = re.compile(r'-?([0-9]*\.[0-9]+|[0-9]+\.[0-9]*)')
+SYM = re.compile(r'[^()\[\]\s\{\}<>,:"]+')
+SPACES = re.compile(r'(\s|#[^\n]*)*')
 
 class Tracker:
   def __init__(self, s, pos=0):
@@ -28,6 +33,37 @@ def parse_reference(t):
         return Reference(s)
     return None
 
+ESCAPE_CHARS = {'"':'"', '\\':'\\', 'a':'\a', 'b':'\b', 'r':'\r', 'n':'\n', 't':'\t', 'f':'\f', 'v':'\v'}
+
+def parse_string(t):
+    reset = t.pos
+    s = parse_re(QUOTE, t)
+    if s:
+        chars = []
+        while True:
+            e = parse_re(ESCAPE, t)
+            if e:
+                if e[1] in 'xuU':
+                    chars += chr(int(e[2:], base=16))
+                else:
+                    chars += ESCAPE_CHARS.get(e[1], e[1])
+            elif parse_re(QUOTE, t):
+                return Constant(helter_builtins.string_box(''.join(chars)))
+            else:
+                chars.append(t.s[t.pos])
+                t.pos += 1
+    t.pos = reset
+    return None
+
+def parse_num(t):
+    n = parse_re(FLOAT, t)
+    if n:
+        return Constant(helter_builtins.float_box(float(n)))
+    n = parse_re(INT, t)
+    if n:
+        return Constant(helter_builtins.int_box(int(n)))
+    return None
+
 def parse_open(t):
     m = parse_re(OPEN, t)
     if m:
@@ -47,7 +83,7 @@ def parse_link(t):
         terms = []
         while True:
             parse_re(SPACES, t)
-            term = parse_term(t)
+            term = parse_term(t, len(terms))
             if term:
                 terms.append(term)
             parse_re(SPACES, t)
@@ -59,23 +95,28 @@ def parse_link(t):
     t.pos = reset
     return None
 
-def parse_term(t):
+def parse_term(t, i):
     reset = t.pos
+    i_k = parse_re(SYM, t)
+    parse_re(SPACES, t)
+    if parse_re(COLON, t):
+        parse_re(SPACES, t)
+        e = parse_expr(t)
+        parse_re(SPACES, t)
+        o_k = None
+        if parse_re(COLON, t):
+            parse_re(SPACES, t)
+            o_k = parse_re(SYM, t)
+        return IndexedTerm(i_k or i, o_k or i, e or IDENTITY)
+    t.pos = reset
     e = parse_expr(t)
     if e:
-        parse_re(SPACES, t)
-        if isinstance(e, Reference) and parse_re(COLON, t):
-            parse_re(SPACES, t)
-            v = parse_expr(t)
-            if v:
-                return IndexedTerm(e.key, v)
-        else:
-            return e
+        return IndexedTerm(i, i, e)
     t.pos = reset
     return None
 
 def parse_expr_not_chain(t):
-    return parse_reference(t) or parse_link(t)
+    return parse_num(t) or parse_string(t) or parse_reference(t) or parse_link(t)
 
 def parse_expr(t):
     reset = t.pos
