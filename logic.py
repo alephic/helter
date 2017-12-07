@@ -24,6 +24,18 @@ class Scope(dict):
     def __contains__(self, k):
         return k in self or k in self.base
 
+class Protect:
+    def __init__(self, base):
+        self.base = base
+    def __getitem__(self, k):
+        return self.base[k]
+    def get(self, k, default=None):
+        return self.base.get(k, default)
+    def __contains__(self, k):
+        return k in self.base
+    def __setitem__(self, k, v):
+        pass
+
 class Value:
     def __init__(self, adjuncts=None):
         self.adjuncts = adjuncts or {}
@@ -97,13 +109,13 @@ class FloatingChain(Value):
         return str(self.chain)
 
 class Expression:
-    def evaluate(self, inputs, scope):
+    def evaluate(self, inputs, scope, mutate_scope=False):
         raise NotImplementedError()
 
 class Chain(Expression):
     def __init__(self, links):
         self.links = links
-    def evaluate(self, inputs, init_scope):
+    def evaluate(self, inputs, init_scope, mutate_scope=False):
         curr = inputs
         scope = init_scope
         for i, link in enumerate(self.links):
@@ -112,7 +124,7 @@ class Chain(Expression):
                     return FloatingChain(Chain([Link(Paren, link.close_brace, link.terms)]+self.links[i+1:]), scope)
                 if link.close_brace is Square and scope is init_scope:
                     scope = Scope(scope)
-            curr = link.evaluate(curr, scope)
+            curr, scope = link.evaluate(curr, scope, mutate_scope=True)
         return curr
     def __str__(self):
         return ''.join(map(str, self.links))
@@ -204,14 +216,14 @@ class Link(Expression):
         self.open_brace = open_brace
         self.close_brace = close_brace
         self.terms = terms
-    def evaluate(self, inputs, scope):
+    def evaluate(self, inputs, scope, mutate_scope=False):
         if self.open_brace is Square:
             return FloatingChain(Chain([Link(Paren, self.close_brace, self.terms)]), scope)
         indices = (term.key if isinstance(term, IndexedTerm) else i for i, term in enumerate(self.terms))
         return self.close_brace.pack(
             indices, inputs,
             (term.evaluate(term_input, scope) for term, term_input in self.open_brace.unpack(indices, self.terms, inputs, scope)),
-            scope
+            scope if mutate_scope or self.close_brace is not Square else Protect(scope)
         )
     def __str__(self):
         return '%s%s%s' % (
@@ -224,15 +236,15 @@ class IndexedTerm(Expression):
     def __init__(self, key, value_expr):
         self.key = key
         self.value_expr = value_expr
-    def evaluate(self, inputs, scope):
-        return self.value_expr.evaluate(inputs, scope)
+    def evaluate(self, inputs, scope, mutate_scope=False):
+        return self.value_expr.evaluate(inputs, scope, mutate_scope)
     def __str__(self):
         return '%s: %s' % (str(self.key), str(self.value_expr))
 
 class Constant(Expression):
     def __init__(self, value):
         self.value = value
-    def evaluate(self, inputs, scope):
+    def evaluate(self, inputs, scope, mutate_scope=False):
         return self.value
     def __str__(self):
         return repr(self.value)
@@ -240,7 +252,7 @@ class Constant(Expression):
 class Reference(Expression):
     def __init__(self, key):
         self.key = key
-    def evaluate(self, inputs, scope):
+    def evaluate(self, inputs, scope, mutate_scope=False):
         deref = scope.get(self.key, HNONE)
         if isinstance(deref, FloatingChain):
             return deref.chain.evaluate(inputs, deref.saved_scope)
