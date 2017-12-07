@@ -206,7 +206,7 @@ class Link(Expression):
         indices = (term.key if isinstance(term, IndexedTerm) else i for i, term in enumerate(self.terms))
         return self.close_brace.pack(
             indices, inputs,
-            (term.evaluate(term_input, Scope(scope)) for term, term_input in self.open_brace.unpack(indices, self.terms, inputs, scope)),
+            (term.evaluate(term_input, scope) for term, term_input in self.open_brace.unpack(indices, self.terms, inputs, scope)),
             scope
         )
     def __str__(self):
