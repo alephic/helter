@@ -94,25 +94,25 @@ def bool_not(x):
     if x is HTRUE:
         return HFALSE
     return logic.HNONE
-BOOL_TYPE.data['!'] = logic.FloatingChain(WrappedFunc(bool_not), {})
+BOOL_TYPE.data['!'] = logic.FloatingChain(WrappedFunc(bool_not))
 
 def bool_and(x):
     if arg_struct_type_check(x, 'bool', 'bool'):
         return bool_box(x.data[0] == HTRUE and x.data[1] == HTRUE)
     return logic.HNONE
-BOOL_TYPE.data['&'] = logic.FloatingChain(WrappedFunc(bool_and), {})
+BOOL_TYPE.data['&'] = logic.FloatingChain(WrappedFunc(bool_and))
 
 def bool_or(x):
     if arg_struct_type_check(x, 'bool', 'bool'):
         return bool_box(x.data[0] == HTRUE or x.data[1] == HTRUE)
     return logic.HNONE
-BOOL_TYPE.data['|'] = logic.FloatingChain(WrappedFunc(bool_or), {})
+BOOL_TYPE.data['|'] = logic.FloatingChain(WrappedFunc(bool_or))
 
 def bool_eq(x):
     if arg_struct_type_check(x, 'bool', 'bool'):
         return bool_box(x.data[0] == x.data[1])
     return logic.HNONE
-BOOL_TYPE.data['='] = logic.FloatingChain(WrappedFunc(bool_eq), {})
+BOOL_TYPE.data['='] = logic.FloatingChain(WrappedFunc(bool_eq))
 
 INT_TYPE = logic.Struct({})
 INT_TYPE.data['which'] = logic.Struct({'int': HUNIT})
@@ -153,3 +153,25 @@ for op in ['!', 'length']:
     BUILTINS[op] = unary_op_dispatch(op)
 for op in ['&', '|', '+', '-', '*', '/', '%', '<', '>', '<=', '>=', '=']:
     BUILTINS[op] = binary_op_dispatch(op)
+
+class CyclicImportError(Exception):
+    pass
+
+IMPORTS_IN_PROGRESS = set()
+def helter_import(x):
+    if type_check(x, 'string'):
+        filename = x.content
+        if filename in IMPORTS_IN_PROGRESS:
+            raise CyclicImportError(filename)
+        try:
+            f = open(filename)
+            parsed = parse.parse(f.read())
+            if parsed:
+                IMPORTS_IN_PROGRESS.add(filename)
+                result = parsed.evaluate(logic.HNONE, logic.Scope(BUILTINS))
+                IMPORTS_IN_PROGRESS.remove(filename)
+                return result
+        except Exception as e:
+            pass
+    return logic.HNONE
+BUILTINS['import'] = logic.FloatingChain(WrappedFunc(helter_import))

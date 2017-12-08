@@ -68,7 +68,7 @@ A prompt should appear. You can type helter expressions into this prompt as part
 ()
 ```
 Evaluating this expression introduced a binding for the reference `id` to the chain `(>`.
-The immediate result was the "unit" value, indicated by `()`.
+The immediate result was the empty value, indicated by `()`.
 
 Now we can refer to the chain `(>` by the handy name `id`:
 ```
@@ -108,3 +108,5 @@ Binary operators accept their input values as a two-place structure:
 > (2, 3} +
 5
 ```
+
+`import`: accepts a filename as a string, returns the result of interpreting the file's contents as helter code
