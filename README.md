@@ -84,14 +84,23 @@ Type `:q` to exit the repl.
 The following references are defined by default:
 
 `unit`: the unit value
+
 `true` and `false`: boolean values
+
 `!`: negation operator (defined for booleans)
+
 `&`, `|`: boolean arithmetic operators (defined for booleans)
+
 `=`: equality operator (defined for booleans, integers and strings)
+
 `+`: addition/concatenation operator (defined for integers and strings)
+
 `-`, `*`, `/`, `%`: arithmetic operators (defined for integers and floats)
+
 `<`, `>` : strict ordering operators (defined for integers and floats)
+
 `<=`, `>=`: or-equal-to ordering operators (defined for integers)
+
 `length`: length operator (defined for strings)
 
 Binary operators accept their input values as a two-place structure:
