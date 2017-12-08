@@ -10,7 +10,7 @@ class WrappedFunc(logic.Expression):
         self.f = f
     def evaluate(self, inputs, scope):
         return self.f(inputs)
-    def _subst(self, scope):
+    def subst(self, scope):
         return self
     def __repr__(self):
         return '?BUILTIN FUNCTION?'
@@ -18,23 +18,22 @@ class WrappedFunc(logic.Expression):
 def type_check(val, type_name):
     return val.get_adjunct('type').get_component('which').get_component(type_name) is not logic.HNONE
 
-def arg_seq_type_check(x, *pos):
-    return isinstance(x, logic.Seq) \
-        and all(type_check(x.data[i], t) for i, t in enumerate(pos))
+def arg_struct_type_check(x, *pos):
+    return all(type_check(x.get_component(i), t) for i, t in enumerate(pos))
 
 def unary_op(op_func, result_boxer, t):
     def f(x):
         if type_check(x, t):
             return result_boxer(op_func(x.content))
         return logic.HNONE
-    return logic.FloatingChain(WrappedFunc(f), {})
+    return logic.FloatingChain(WrappedFunc(f))
 
 def binary_op(op_func, result_boxer, t1, t2):
     def f(x):
         if arg_struct_type_check(x, t1, t2):
             return result_boxer(op_func(x.data[0].content, x.data[1].content))
         return logic.HNONE
-    return logic.FloatingChain(WrappedFunc(f), {})
+    return logic.FloatingChain(WrappedFunc(f))
 
 def unary_op_dispatch(op_id):
     return logic.FloatingChain(logic.Chain([
@@ -49,13 +48,14 @@ def unary_op_dispatch(op_id):
                 logic.Reference('op')
             ]))
         ])
-    ]), {})
+    ]))
 
 def binary_op_dispatch(op_id):
     return logic.FloatingChain(logic.Chain([
-        logic.Link(logic.Paren, logic.Square, [
-            logic.IndexedTerm(0,'x',logic.IDENTITY)]
-        ),
+        logic.Link(logic.Curly, logic.Square, [
+            logic.IndexedTerm(0,'x',logic.IDENTITY),
+            logic.IndexedTerm(1,'y',logic.IDENTITY)
+        ]),
         logic.Reference('x'),
         logic.Link(logic.Angle, logic.Paren, [
             logic.IndexedTerm('type', 0, logic.Chain([
@@ -69,7 +69,7 @@ def binary_op_dispatch(op_id):
                 logic.Reference('op')
             ]))
         ])
-    ]), {})
+    ]))
 
 UNIT_TYPE = logic.Struct({})
 HUNIT = logic.Symbol(name='unit', adjuncts={'type': UNIT_TYPE})

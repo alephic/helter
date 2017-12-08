@@ -23,6 +23,8 @@ class Scope(dict):
         return super().get(k) or self.base.get(k, default)
     def __contains__(self, k):
         return k in self or k in self.base
+    def __repr__(self):
+        return '%s + %s' % (repr(self.base), super().__repr__())
 
 class Protect:
     def __init__(self, base):
@@ -35,6 +37,8 @@ class Protect:
         return k in self.base
     def __setitem__(self, k, v):
         pass
+    def __repr__(self):
+        return 'Protect(%s)' % repr(self.base)
 
 class Shadow:
     def __init__(self, base, shadow_keys):
@@ -124,10 +128,9 @@ class Struct(Value):
         return isinstance(other, Struct) and self.data == other.data
 
 class FloatingChain(Value):
-    def __init__(self, chain, saved_scope, adjuncts=None):
+    def __init__(self, chain, saved_scope=None, adjuncts=None):
         super().__init__(adjuncts)
-        self.chain = chain
-        self.saved_scope = saved_scope
+        self.chain = chain.subst(saved_scope) if saved_scope is not None else chain
     def adjoin(self, d):
         updated = dict(d)
         for k, v in self.adjuncts.items():
@@ -148,6 +151,8 @@ class Identity(Expression):
         return inputs
     def subst(self, scope):
         return self
+    def __str__(self):
+        return ''
 IDENTITY = Identity()
 
 class Chain(Expression):
@@ -304,7 +309,7 @@ class Constant(Expression):
     def evaluate(self, inputs, scope, mutate_scope=False):
         return self.value
     def __str__(self):
-        return repr(self.value)
+        return str(self.value)
     def subst(self, scope):
         return self
 
@@ -314,7 +319,7 @@ class Reference(Expression):
     def evaluate(self, inputs, scope, mutate_scope=False):
         deref = scope.get(self.key, HNONE)
         if isinstance(deref, FloatingChain):
-            return deref.chain.evaluate(inputs, deref.saved_scope)
+            return deref.chain.evaluate(inputs, scope)
         return deref
     def __str__(self):
         return str(self.key)
