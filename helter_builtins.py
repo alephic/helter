@@ -64,7 +64,7 @@ def binary_op_dispatch(op_id):
                 ),
                 logic.Link(logic.Paren, logic.Curly, [
                     logic.IndexedTerm(0, 0, logic.Reference('x')),
-                    logic.IndexedTerm(0, 0, logic.Reference('y'))
+                    logic.IndexedTerm(1, 1, logic.Reference('y'))
                 ]),
                 logic.Reference('op')
             ]))
@@ -93,25 +93,25 @@ def bool_not(x):
         return HTRUE
     if x is HTRUE:
         return HFALSE
-    return HNONE
+    return logic.HNONE
 BOOL_TYPE.data['!'] = logic.FloatingChain(WrappedFunc(bool_not), {})
 
 def bool_and(x):
     if arg_struct_type_check(x, 'bool', 'bool'):
         return bool_box(x.data[0] == HTRUE and x.data[1] == HTRUE)
-    return HNONE
+    return logic.HNONE
 BOOL_TYPE.data['&'] = logic.FloatingChain(WrappedFunc(bool_and), {})
 
 def bool_or(x):
     if arg_struct_type_check(x, 'bool', 'bool'):
         return bool_box(x.data[0] == HTRUE or x.data[1] == HTRUE)
-    return HNONE
+    return logic.HNONE
 BOOL_TYPE.data['|'] = logic.FloatingChain(WrappedFunc(bool_or), {})
 
 def bool_eq(x):
     if arg_struct_type_check(x, 'bool', 'bool'):
         return bool_box(x.data[0] == x.data[1])
-    return HNONE
+    return logic.HNONE
 BOOL_TYPE.data['='] = logic.FloatingChain(WrappedFunc(bool_eq), {})
 
 INT_TYPE = logic.Struct({})

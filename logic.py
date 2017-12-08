@@ -1,18 +1,4 @@
 
-class SymbolPool:
-    def __init__(self):
-        self.data = {}
-    def __getitem__(self, k):
-        return self.data.get(k) or self.make(k)
-    def get(self, k, default=None):
-        return self.data.get(k) or self.make(k)
-    def __contains__(self, k):
-        return True
-    def make(self, k):
-        s = Symbol(k)
-        self.data[k] = s
-        return s
-
 class Scope(dict):
     def __init__(self, base):
         super().__init__()
@@ -170,7 +156,7 @@ class Chain(Expression):
             curr = link.evaluate(curr, scope, mutate_scope=True)
         return curr
     def __str__(self):
-        return ''.join(map(str, self.links))
+        return ' '.join(map(str, self.links))
     def subst(self, init_scope):
         scope = init_scope
         new_links = []
@@ -307,6 +293,8 @@ class Constant(Expression):
     def __init__(self, value):
         self.value = value
     def evaluate(self, inputs, scope, mutate_scope=False):
+        if isinstance(self.value, FloatingChain):
+            return self.value.chain.evaluate(inputs, scope)
         return self.value
     def __str__(self):
         return str(self.value)
